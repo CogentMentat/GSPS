@@ -8,7 +8,18 @@ Date created: 2014-09-07
 import itertools as it
 import pdb
 
-class Mask(object):
+class M_matrix(object):
+    """
+    Full M-matrix defined by desired maximum mask depth and number of
+    variables in a data system.  Introduced on p. 100 in ASPS.
+
+    Args:
+      vnum (int): number of variables in the data system
+      maxdepth (int): number of consecutive support states the M-matrix should
+        span on the data system
+
+    """
+
 
     def __init__(self, vnum, maxdepth):
         self.vnum = vnum
@@ -25,7 +36,7 @@ class Mask(object):
         Intended to be called from the mask_generator method.
 
         Index lists correspond to meaningful submasks as defined on p. 100 of
-        Archetecture of Systems Problem Solving by George Klir and Doug Elias.
+        ASPS.
 
         Args:
           gen_stack (list): list of _powerset generators, length equal to
@@ -34,7 +45,7 @@ class Mask(object):
             of indices, length equal to gen_stack's length
 
         Yields:
-          tuple: indices in the 1st and 2nd dimensions, respectively
+          tuple: indices in the 1st and 2nd dimensions
 
         """
 
