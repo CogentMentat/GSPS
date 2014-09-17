@@ -6,6 +6,9 @@ Date created: 2014-09-07
 """
 
 import itertools as it
+from collections import defaultdict
+import pandas as pd
+import numpy as np
 import pdb
 
 class M_matrix(object):
@@ -81,3 +84,64 @@ class M_matrix(object):
         ind_stack = [0]*self.vnum
         rind = 0
         return self.gen_inds(gen_stack, ind_stack, rind)
+
+class Generative_system(object):
+    """
+    Generative system for crisp data.
+
+    Args:
+      maskinds (list): i and j indices defining a mask on the data system
+
+    """
+
+    def __init__(self, maskinds):
+
+        self.maskinds = maskinds
+
+    def prob_bf(self, data):
+        """
+        Probabilistic behavior function.
+
+        Args:
+          data (numpy.ndarray): curated data of n rows by t columns, where n
+            is the number of variables in the data system and t is the number
+            of support states.
+
+        Returns:
+          pandas.dataframe: a s by m+1 df, where s is the number of observed
+            sampling variable tuples covered by the mask and m is the number
+            of sampling variables in the mask.  The final column is the
+            observed probability of the sampling variable tuple in the data
+            using the maximum likelihoood estimator.
+
+        """
+
+        mwidth = max(self.maskinds[1]) - min(self.maskinds[1]) + 1
+        support_len = data.shape[1]
+        sample_num = support_len - mwidth + 1
+
+        # the defaultdict will learn occurring samples as the mask scans
+        # across the data
+        d_samp_cnt = defaultdict(int)
+        for s in xrange(sample_num):
+            # scan the mask across the ordered support
+            sampinds = [self.maskinds[0],
+                        [j+s for j in self.maskinds[1]]]
+            sample = data[sampinds]
+            d_samp_cnt[tuple(sample)] += 1
+
+        tot_count = 0
+        for c in d_samp_cnt.itervalues():
+            tot_count += c
+        tot_count = float(tot_count)
+        sample_len = len(self.maskinds[0])
+        sample_cnt = len(d_samp_cnt)
+        # probabilistic behavior function array
+        dtype = [('s{}'.format(i),'u2') for i in range(sample_len)] + \
+                [('f', 'f4')]
+        a_bf = np.array(np.zeros(shape=(sample_cnt,),
+                        dtype=dtype))
+        for s, (sample, count) in enumerate(d_samp_cnt.iteritems()):
+            a_bf[s] = tuple(list(sample) + [count/tot_count])
+
+        return pd.DataFrame(a_bf)
