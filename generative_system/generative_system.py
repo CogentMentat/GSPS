@@ -1,7 +1,7 @@
 """
 Functions for creating a generative system on a curated data set.
 
-Author(s): Alexander TJ Barron (and potentially others)
+Author(s): Alexander TJ Barron
 Date created: 2014-09-07
 """
 
@@ -33,7 +33,7 @@ class M_matrix(object):
             for c in it.combinations(xrange(self.maxdepth), r):
                 yield c
         
-    def gen_inds(self, gen_stack, ind_stack, rind):
+    def gen_inds(self, gen_stack, ind_stack, rind, increasing):
         """
         Generates lists of indices for masking a numpy array of data.
         Intended to be called from the mask_generator method.
@@ -46,35 +46,83 @@ class M_matrix(object):
             the number of variables in the generative system
           ind_stack (list): list of filler values to be replaced by tuples
             of indices, length equal to gen_stack's length
+          increasing (bool, optional): True for yielding generating and
+            generated states while increasing the ordered support index of the
+            mask or False for decreasing
 
         Yields:
-          tuple: indices in the 1st and 2nd dimensions
+          if increasing is not specified:
+            tuple: indices in the 1st and 2nd dimensions
+          if increasing is True or False:
+            tuple: generating indices in the 1st and 2nd dimensions
+            tuple: generated indices in the 1st and 2nd dimensions
 
         """
 
+        def generative_inds(ind_stack, increasing):
+            """Produce generative indices."""
+            
+            generating_iindspre = \
+                    [[i]*(len(inds) - 1) for i, inds in \
+                    enumerate(ind_stack)]
+            generating_iinds = \
+                    reduce(lambda x, y: list(x) + list(y),
+                           generating_iindspre)
+            
+            if increasing:
+                generated_iinds = range(self.vnum)
+                generating_jinds = \
+                        reduce(lambda x, y: list(x)[:-1] + \
+                                            list(y)[:-1],
+                               ind_stack)
+                generated_jinds = [ind[-1] for ind in ind_stack]
+            else:
+                generated_iinds = range(self.vnum)
+                generating_jinds = \
+                        reduce(lambda x, y: list(x)[1:] + \
+                                            list(y)[1:],
+                               ind_stack)
+                generated_jinds = [ind[0] for ind in ind_stack]
+
+            generated_inds = [generated_iinds, generated_jinds]
+            generating_inds = [generating_iinds, generating_jinds]
+
+            return generated_inds, generating_inds
+
+        # actual recursive generator
         while rind > -1:
             try:
                 ind_stack[rind] = gen_stack[rind].next()
                 if rind == self.vnum - 1:
-                    iindspre = [[i]*len(inds) for i, inds in enumerate(ind_stack)]
-                    iinds = reduce(lambda x, y: list(x) + list(y), iindspre)
-                    jinds = reduce(lambda x, y: list(x) + list(y), ind_stack)
+                    jinds = reduce(lambda x, y: list(x) + list(y),
+                                   ind_stack)
                     if self.maxdepth - 1 not in jinds:
                         pass # for condition m2 on p. 100
-                    else:
+                    if increasing == None: # non-generative system
+                        iindspre = [[i]*len(inds) for i, inds in \
+                                    enumerate(ind_stack)]
+                        iinds = reduce(lambda x, y: list(x) + list(y),
+                                       iindspre)
                         yield [iinds, jinds]
+                    if increasing != None: # generative system
+                        yield generative_inds(ind_stack, increasing) 
                 else:
                     rind += 1
-                self.gen_inds(gen_stack, ind_stack, rind)
+                    self.gen_inds(gen_stack, ind_stack, rind, increasing)
             except StopIteration:
                 gen_stack[rind] = self._powerset()
                 rind -= 1
-                self.gen_inds(gen_stack, ind_stack, rind)
+                self.gen_inds(gen_stack, ind_stack, rind, increasing)
 
-    def mask_generator(self):
+    def mask_generator(self, increasing=None):
         """
         Generate all possible mask indices.
         
+        Args:
+          increasing (bool, optional): True for yielding generating and
+            generated states while increasing the ordered support index of the
+            mask or False for decreasing.  Default is None for making
+            non-generative masks.
         Returns:
           generator: yielding tuples of indices for masking a numpy array
         
@@ -83,7 +131,8 @@ class M_matrix(object):
         gen_stack = [self._powerset() for j in range(self.vnum)]
         ind_stack = [0]*self.vnum
         rind = 0
-        return self.gen_inds(gen_stack, ind_stack, rind)
+        return self.gen_inds(gen_stack, ind_stack, rind, increasing)
+
 
 class Generative_system(object):
     """
