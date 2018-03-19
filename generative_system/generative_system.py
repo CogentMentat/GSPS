@@ -46,9 +46,8 @@ class M_matrix(object):
             the number of variables in the generative system
           ind_stack (list): list of filler values to be replaced by tuples
             of indices, length equal to gen_stack's length
-          increasing (bool, optional): True for yielding generating and
-            generated states while increasing the ordered support index of the
-            mask or False for decreasing
+          increasing (bool, optional): Mask generation direction (False for
+            decreasing)
 
         Yields:
           if increasing is not specified:
