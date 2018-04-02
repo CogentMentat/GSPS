@@ -7,7 +7,7 @@ Date created: 2014-09-07
 """
 
 from collections import defaultdict
-from itertools import combinations
+from itertools import combinations, groupby
 from functools import reduce
 import numpy as np
 
@@ -187,18 +187,15 @@ class Generative_system(object):
             is the number of variables in the data system and t is the number
             of support states.
 
-        Returns:
-          pandas.dataframe: a s by m+1 df, where s is the number of observed
-            sampling variable tuples covered by the mask and m is the number
-            of sampling variables in the mask.  The final column is the
-            observed probability of the sampling variable tuple in the data
-            using the maximum likelihoood estimator.
-
         """
 
-        mwidth = max(self.maskinds[1]) - min(self.maskinds[1]) + 1
+        #mwidth = max(self.maskinds[1]) - min(self.maskinds[1]) + 1
+        #support_len = data.shape[1]
+        #sample_num = support_len - mwidth + 1
+
         support_len = data.shape[1]
-        sample_num = support_len - mwidth + 1
+        maxdepth = max(self.maskinds[1]) + 1
+        sample_num = support_len - maxdepth + 1
 
         # Record all sampling variables for the mask.
         d_samp_cnt = defaultdict(int)
@@ -292,26 +289,27 @@ class Generative_system(object):
 
 def find_admissible_behavior_systems(generative_systems):
     """
-    Isolate admissible behavior systems, using the methodology in pp.  115-120
+    Isolate admissible behavior systems, using the methodology in pp. 115-120
     in ASPS.
 
     """
 
-    complex_sorted = sorted(it.groupby(gensyslist, lambda x: x['complexity']), 
-                            key=lambda x: x[0], reverse=True)
+    complex_sorted = groupby(sorted(generative_systems,
+                                    key=lambda x: x.complexity, reverse=True),
+                             lambda x: x.complexity)
 
     admissible = []
     admissible_uncertainties = [np.inf]
-    for complexity_block in complex_sorted:
+    for complexity, complexity_block in complex_sorted:
 
         unc_sorted = sorted(complexity_block, key=lambda x: x.uncertainty,
                 reverse=False)
         lowest_unc = unc_sorted[0].uncertainty
 
         ## Establish upper bound of complexity in complexity-uncertainty front.
-        if any([lowest_unc <= unc in admissible_uncertainties]):
-            admissible = []
-            admissible_uncertainties = []
+        if any([lowest_unc <= unc for unc in admissible_uncertainties]):
+            admissible = [unc_sorted[0]]
+            admissible_uncertainties = [lowest_unc]
         else:
             admissible.append(unc_sorted[0])
             admissible_uncertainties.append(lowest_unc)
