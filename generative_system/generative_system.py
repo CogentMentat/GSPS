@@ -29,12 +29,12 @@ class M_matrix(object):
     def __init__(self, vnum, maxdepth):
         self.vnum = vnum
         self.maxdepth = maxdepth
-    
+
     def _powerset(self):
         for r in range(1,self.maxdepth + 1):
             for c in combinations(range(self.maxdepth), r):
                 yield c
-        
+
     def gen_inds(self, gen_stack, ind_stack, rind, increasing):
         """
         Generates lists of indices for masking a numpy array of data.
@@ -84,14 +84,14 @@ class M_matrix(object):
 
                         if not any([len(inds) > 1 for inds in iindspre]):
                             continue # Won't create generating/ed indices.
-                        
+
                         # Split mask into generating and generated indices.
                         generating_iindspre = []
                         generated_iindspre = []
                         generating_jindspre = []
                         generated_jindspre = []
                         for rowinds, colinds in zip(iindspre, jindspre):
-                            if len(rowinds) > 1: 
+                            if len(rowinds) > 1:
                                 # This row has more than one entry, so should
                                 # be split.
                                 if increasing: # Increasing system over backdrop.
@@ -109,7 +109,7 @@ class M_matrix(object):
                                 # generating states.
                                 generated_iindspre.append(rowinds)
                                 generated_jindspre.append(colinds)
-                        
+
                         try:
                             generating_iinds = reduce(lambda x, y: list(x) + list(y),
                                            generating_iindspre)
@@ -138,7 +138,7 @@ class M_matrix(object):
     def mask_generator(self, increasing=None):
         """
         Generate all possible mask indices.
-        
+
         Args:
           increasing (bool, optional): True for yielding generating and
             generated states while increasing the ordered support index of the
@@ -146,7 +146,7 @@ class M_matrix(object):
             non-generative masks.
         Returns:
           generator: yielding tuples of indices for masking a numpy array
-        
+
         """
 
         gen_stack = [self._powerset() for j in range(self.vnum)]
@@ -172,7 +172,7 @@ class Generative_system(object):
         self.maskinds = maskinds
         self.generating_maskinds = generating_maskinds
         self.generated_maskinds = generated_maskinds
-        
+
         generatednum = len(generated_maskinds[0])
         generatingnum = len(generating_maskinds[0])
         self.generating_sampinds = range(generatingnum)
@@ -221,7 +221,7 @@ class Generative_system(object):
         for c in d_samp_cnt.values():
             tot_count += c
         tot_count = float(tot_count)
-        
+
         # Probabilistic behavior function array, split into generating,
         # generated, and probability lists (same order).  This keeps variable
         # states as tuples with integer values.  Placing generated and
@@ -267,7 +267,7 @@ class Generative_system(object):
         """Calculate generative uncertainty."""
         uncertainty = 0
         for gtng in self.generating_sampvars:
-            
+
             inner_summands = []
             for gtd in self.generated_sampvars:
                 gtd_gtng = (gtd, gtng)
@@ -291,6 +291,10 @@ def find_admissible_behavior_systems(generative_systems):
     """
     Isolate admissible behavior systems, using the methodology in pp. 115-120
     in ASPS.
+
+    Args:
+      generative_systems: list of things that can be indexed to get complexity
+        and uncertainty, using `thing.complexity`, etc.
 
     """
 
