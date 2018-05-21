@@ -182,6 +182,11 @@ class Generative_system(object):
         """
         Get the probabilistic behavior functions.
 
+        NOTE: if the mask variable dimension (0) is not as large as the data
+        variable dimension, the mask will scan across the top, then drop down
+        a row and scan across again, etc. until the bottom of the mask covers
+        the bottom of the data matrix in a final scan.
+
         Args:
           data (numpy.ndarray): curated data of n rows by t columns, where n
             is the number of variables in the data system and t is the number
@@ -189,33 +194,34 @@ class Generative_system(object):
 
         """
 
-        #mwidth = max(self.maskinds[1]) - min(self.maskinds[1]) + 1
-        #support_len = data.shape[1]
-        #sample_num = support_len - mwidth + 1
+        colsupport_len = data.shape[1]
+        maxcoldepth = max(self.maskinds[1]) + 1
+        colscan_num = colsupport_len - maxcoldepth + 1
 
-        support_len = data.shape[1]
-        maxdepth = max(self.maskinds[1]) + 1
-        sample_num = support_len - maxdepth + 1
+        rowsupport_len = data.shape[0]
+        maxrowdepth = max(self.maskinds[0]) + 1
+        rowscan_num = rowsupport_len - maxrowdepth + 1
 
         # Record all sampling variables for the mask.
         d_samp_cnt = defaultdict(int)
         gtng_sampvars = set()
         gtd_sampvars = set()
-        for s in range(sample_num):
+        for rs in range(rowscan_num):
+            for cs in range(colscan_num):
 
-            # Full mask counts.
-            sampinds = [self.maskinds[0],
-                        [j+s for j in self.maskinds[1]]]
-            sample = data[sampinds]
-            d_samp_cnt[tuple(sample)] += 1
+                # Full mask counts.
+                sampinds = [[j+rs for j in self.maskinds[0]],
+                            [j+cs for j in self.maskinds[1]]]
+                sample = data[sampinds]
+                d_samp_cnt[tuple(sample)] += 1
 
-            ## Generating and generated variables observed.
-            generatinginds = [self.generating_maskinds[0],
-                                [j+s for j in self.generating_maskinds[1]]]
-            gtng_sampvars.add(tuple(data[generatinginds]))
-            generatedinds = [self.generated_maskinds[0],
-                                [j+s for j in self.generated_maskinds[1]]]
-            gtd_sampvars.add(tuple(data[generatedinds]))
+                ## Generating and generated variables observed.
+                generatinginds = [[j+rs for j in self.generating_maskinds[0]],
+                                    [j+cs for j in self.generating_maskinds[1]]]
+                gtng_sampvars.add(tuple(data[generatinginds]))
+                generatedinds = [[j+rs for j in self.generated_maskinds[0]],
+                                    [j+cs for j in self.generated_maskinds[1]]]
+                gtd_sampvars.add(tuple(data[generatedinds]))
 
         tot_count = 0
         for c in d_samp_cnt.values():
