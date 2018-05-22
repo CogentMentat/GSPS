@@ -11,6 +11,8 @@ from itertools import combinations, groupby
 from functools import reduce
 import numpy as np
 
+import pdb
+
 class M_matrix(object):
     """
     Full M-matrix defined by desired maximum mask depth and number of
@@ -152,6 +154,53 @@ class M_matrix(object):
         rind = 0
         return self.gen_inds(gen_stack, ind_stack, rind, increasing)
 
+    def mask_generator_onlymaxbackdropgenerating(self, increasing=None):
+        """
+        Alter the GSPS' generating mask behavior so only the rows containing
+        the maximum backdrop (a.k.a. support) instances in the mask are
+        considered generated.  Example: for a mask masking one column entirely
+        at backdrop instance 0, and only one variable masked at backdrop
+        instance 1, the only generated value is the variable at backdrop
+        instance 1.  The previous column comprises generating values.
+
+        Args:
+          increasing (bool, optional): True for yielding generating and
+            generated states while increasing the ordered support index of the
+            mask or False for decreasing.  Default is None for making
+            non-generative masks.
+        Returns:
+          generator: yielding tuples of indices for masking a numpy array
+
+        """
+
+        if increasing != True:
+            raise Exception("The only supported option is increasing=True " \
+                    "at this time.")
+
+        gen_stack = [self._powerset() for j in range(self.vnum)]
+        ind_stack = [0]*self.vnum
+        rind = 0
+        # We will be manipulating the entire mask, so the `increasing`
+        # paramter for the gen_inds function below is set to None.
+        for iinds, jinds in self.gen_inds(gen_stack, ind_stack, rind, None):
+
+            iinds = np.array(iinds)
+            jinds = np.array(jinds)
+
+            maxjind = jinds.max()
+
+            maxjindwhere = np.where(np.array(jinds) == maxjind)[0]
+            generated_jinds = jinds[maxjindwhere]
+            generated_iinds = iinds[maxjindwhere]
+
+            notmaxjindwhere = np.where(np.array(jinds) != maxjind)[0]
+            generating_jinds = jinds[notmaxjindwhere]
+            generating_iinds = iinds[notmaxjindwhere]
+
+            # Other parts of this module assume lists for generating/generated
+            # i/j indices.
+            yield [[list(generated_iinds), list(generated_jinds)], \
+                    [list(generating_iinds), list(generating_jinds)]]
 
 class Generative_system(object):
     """
@@ -164,8 +213,8 @@ class Generative_system(object):
 
     def __init__(self, generated_maskinds, generating_maskinds):
 
-        maskinds = [generating_maskinds[0] + generated_maskinds[0],
-                    generating_maskinds[1] + generated_maskinds[1]]
+        maskinds = [list(generating_maskinds[0]) + list(generated_maskinds[0]),
+                    list(generating_maskinds[1]) + list(generated_maskinds[1])]
 
         self.maskinds = maskinds
         self.generating_maskinds = generating_maskinds
@@ -237,7 +286,10 @@ class Generative_system(object):
         maskstate_probs = []
         for sample, count in d_samp_cnt.items():
             #generated_varstates.append(tuple(sample[self.generated_sampinds]))
-            generated_varstates.append(tuple([sample[si] for si in self.generated_sampinds]))
+            try:
+                generated_varstates.append(tuple([sample[si] for si in self.generated_sampinds]))
+            except:
+                pdb.set_trace()
             #generating_varstates.append(tuple(sample[self.generating_sampinds]))
             generating_varstates.append(tuple([sample[si] for si in self.generating_sampinds]))
             maskstate_probs.append(count/tot_count)
