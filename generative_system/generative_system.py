@@ -11,8 +11,6 @@ from itertools import combinations, groupby
 from functools import reduce
 import numpy as np
 
-import pdb
-
 class M_matrix(object):
     """
     Full M-matrix defined by desired maximum mask depth and number of
@@ -114,7 +112,7 @@ class M_matrix(object):
                             generating_iinds = reduce(lambda x, y: list(x) + list(y),
                                            generating_iindspre)
                         except:
-                            pdb.set_trace()
+                            raise Exception("generating_iindspre is []")
                         generating_jinds = reduce(lambda x, y: list(x) + list(y),
                                        generating_jindspre)
                         generated_iinds = reduce(lambda x, y: list(x) + list(y),
